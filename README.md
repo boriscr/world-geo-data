@@ -49,7 +49,7 @@ fetch('https://raw.githubusercontent.com/boriscr/world-geo-data/main/data/cities
 ```
 
 ### Vista escritorio
-<img src="https://i.postimg.cc/7PJ05XMn/location1.png">
+<a href="https://postimages.org/" target="_blank"><img src="https://i.postimg.cc/7PJ05XMn/location1.png" alt="location1"/></a>
 
 ### Vista movil
-<img src="https://i.postimg.cc/dQZrhnm9/location2.png">
+<a href="https://postimages.org/" target="_blank"><img src="https://i.postimg.cc/dQZrhnm9/location2.png" alt="location2"/></a>
