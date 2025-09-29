@@ -201,7 +201,6 @@ resources/views/components/input-label.blade.php
 
 #### JavaScript:
 ```
-
 <script>
 // Location Manager - Gestor de ubicaciones
 class LocationManager {
@@ -353,6 +352,67 @@ class LocationManager {
             countrySelect.appendChild(option);
         });
     }
+    async validateSelections() {
+        const country = document.getElementById('country').value;
+        const province = document.getElementById('province').value;
+        const city = document.getElementById('city').value;
+
+        // Validación UX (no de seguridad)
+        if (!country || !province || !city) {
+            this.showValidationError('Por favor, completa todas las ubicaciones');
+            return false;
+        }
+
+        // Verificar que las selecciones sean consistentes (UX)
+        const isValid = await this.areSelectionsConsistent(country, province, city);
+
+        if (!isValid) {
+            this.showValidationError('Las ubicaciones seleccionadas no son consistentes');
+            return false;
+        }
+
+        this.clearValidationError();
+        return true;
+    }
+
+    async areSelectionsConsistent(country, province, city) {
+        try {
+            // Validar que la provincia pertenece al país
+            const provincesResponse = await fetch(`${this.baseUrl}/location/countries/${country}/states`);
+            const provinces = await provincesResponse.json();
+            const validProvince = provinces.some(p => p.code === province);
+            if (!validProvince) return false;
+
+            // Validar que la ciudad pertenece a la provincia
+            const citiesResponse = await fetch(`${this.baseUrl}/location/countries/${country}/states/${province}/cities`);
+            const cities = await citiesResponse.json();
+            const validCity = cities.some(c => c.name === city);
+
+            return validCity;
+
+        } catch (error) {
+            console.error('Validation error:', error);
+            return true; // ✅ Si falla, dejamos que el backend decida
+        }
+    }
+
+    showValidationError(message) {
+        this.clearValidationError();
+
+        const errorDiv = document.createElement('div');
+        errorDiv.className = 'validation-error mt-2 p-2 bg-red-100 border border-red-400 text-red-700 rounded';
+        errorDiv.id = 'location-validation-error';
+        errorDiv.textContent = message;
+
+        const citySelect = document.getElementById('city');
+        citySelect.parentNode.appendChild(errorDiv);
+    }
+
+    clearValidationError() {
+        const existingError = document.getElementById('location-validation-error');
+        if (existingError) existingError.remove();
+    }
+
 }
 
 // Crear instancia global
@@ -369,9 +429,134 @@ if (document.readyState === 'interactive' || document.readyState === 'complete')
 }
 </script>
 ```
+### 5. Validación en FormRequest
+app/Http/Requests/RegisteredStoreRequest.php:
+```
+<?php
 
-### Vista escritorio
-<img src="https://i.postimg.cc/7PJ05XMn/location1.png">
+namespace App\Http\Requests;
 
-### Vista movil
-<img src="https://i.postimg.cc/dQZrhnm9/location2.png">
+use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Support\Facades\Cache;
+
+class RegisteredStoreRequest extends FormRequest
+{
+    private $cacheTime = 3600;
+    private $githubBaseUrl = 'https://raw.githubusercontent.com/boriscr/world-geo-data/main/data';
+
+    public function rules(): array
+    {
+        return [
+            // ... otros campos ...
+            
+            'country' => [
+                'required', 
+                'string', 
+                'max:2',
+                function ($attribute, $value, $fail) {
+                    if (!$this->isValidCountry($value)) {
+                        $fail('El país seleccionado no es válido.');
+                    }
+                }
+            ],
+            'province' => [
+                'required',
+                'string', 
+                'max:10',
+                function ($attribute, $value, $fail) {
+                    $country = $this->input('country');
+                    if (!$this->isValidProvince($country, $value)) {
+                        $fail('La provincia seleccionada no es válida para el país.');
+                    }
+                }
+            ],
+            'city' => [
+                'required',
+                'string', 
+                'max:100',
+                function ($attribute, $value, $fail) {
+                    $country = $this->input('country');
+                    $province = $this->input('province');
+                    if (!$this->isValidCity($country, $province, $value)) {
+                        $fail('La ciudad seleccionada no es válida para la provincia.');
+                    }
+                }
+            ],
+        ];
+    }
+
+    private function isValidCountry(string $countryCode): bool
+    {
+        if (empty($countryCode)) return false;
+
+        $countries = Cache::remember('valid_countries', $this->cacheTime, function () {
+            return $this->fetchFromGitHub('countries.json') ?? [];
+        });
+
+        return collect($countries)->pluck('code')->contains($countryCode);
+    }
+
+    private function isValidProvince(string $countryCode, string $provinceCode): bool
+    {
+        if (empty($countryCode) || empty($provinceCode)) return false;
+
+        $cacheKey = "provinces_{$countryCode}";
+        
+        $provinces = Cache::remember($cacheKey, $this->cacheTime, function () use ($countryCode) {
+            return $this->fetchFromGitHub("states/{$countryCode}.json") ?? [];
+        });
+
+        return collect($provinces)->contains('code', $provinceCode);
+    }
+
+    private function isValidCity(string $countryCode, string $provinceCode, string $cityName): bool
+    {
+        if (empty($countryCode) || empty($provinceCode) || empty($cityName)) return false;
+
+        $cacheKey = "cities_{$countryCode}_{$provinceCode}";
+        
+        $cities = Cache::remember($cacheKey, $this->cacheTime, function () use ($countryCode, $provinceCode) {
+            return $this->fetchFromGitHub("cities/{$countryCode}/{$provinceCode}.json") ?? [];
+        });
+
+        return in_array($cityName, $cities);
+    }
+
+    private function fetchFromGitHub(string $path)
+    {
+        $url = "{$this->githubBaseUrl}/{$path}";
+        
+        $ch = curl_init();
+        
+        curl_setopt_array($ch, [
+            CURLOPT_URL => $url,
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_TIMEOUT => 10,
+            CURLOPT_FOLLOWLOCATION => true,
+            CURLOPT_SSL_VERIFYPEER => app()->environment('production'),
+            CURLOPT_SSL_VERIFYHOST => app()->environment('production') ? 2 : false,
+            CURLOPT_USERAGENT => 'Laravel-App/1.0',
+        ]);
+        
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        
+        curl_close($ch);
+        
+        if ($httpCode === 200 && $response !== false) {
+            return json_decode($response, true);
+        }
+        
+        return null;
+    }
+
+    public function messages(): array
+    {
+        return [
+            'country.*' => 'País inválido.',
+            'province.*' => 'Provincia inválida para el país seleccionado.',
+            'city.*' => 'Ciudad inválida para la provincia seleccionada.',
+        ];
+    }
+}
+```
