@@ -2,18 +2,9 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 
-Base de datos geográfica completa con países, estados/provincias y ciudades. Especialmente enfocada en Argentina y futuro demás paises de Latinoamérica.
+Base de datos geográfica completa de Argentina.
 
 ## 🚀 ¿Por qué usar World Geo Data?
-
-### Para Desarrolladores que odian configurar bases de datos geográficas:
-
-| Problema común                               | Solución                                     |
-| -------------------------------------------- | -------------------------------------------- |
-| "Configurar países/provincias es un dolor"   | ✅ **JSON listo para usar**                   |
-| "Los datos se desactualizan"                 | ✅ **Actualizaciones automáticas vía GitHub** |
-| "No encuentro ciudades de Latinoamérica"     | ✅ **Enfoque LATAM con cobertura profunda**   |
-| "La validación de ubicaciones es complicada" | ✅ **Sistema de validación integrado**        |
 
 ### ⚡ Empezar en 2 minutos
 
@@ -44,11 +35,6 @@ fetch('https://raw.githubusercontent.com/boriscr/world-geo-data/main/data/countr
 ```
 [
   {"code": "AR", "name": "Argentina", "flag": "🇦🇷"},
-  {"code": "BO", "name": "Bolivia", "flag": "🇧🇴"},
-  {"code": "UY", "name": "Uruguay", "flag": "🇺🇾"},
-  {"code": "CL", "name": "Chile", "flag": "🇨🇱"},
-  {"code": "BR", "name": "Brasil", "flag": "🇧🇷"},
-  {"code": "PY", "name": "Paraguay", "flag": "🇵🇾"}
 ]
 ```
 ### 🛡️ Seguridad Incorporada
@@ -60,12 +46,11 @@ if (!isValidCountry($request->país)) {
 ```
 ## Características
 
-- ✅ **+200 países (futuro)** con códigos ISO
 - ✅ **Estados/Provincias** detallados
 - ✅ **Ciudades** principales y secundarias
 - ✅ **Formato JSON** fácil de usar
 - ✅ **Actualizaciones** constantes
-- ✅ **Enfoque LATAM** con cobertura
+- ✅ **Enfoque ARGENTINA** con cobertura
 
 ## 🛡️ Características de Seguridad
 
